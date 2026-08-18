@@ -57,5 +57,14 @@ Runner 只从进程环境读取密钥。OpenCode 配置使用 `{env:ANTHROPIC_AU
 - `results.local.json`：本机脱敏汇总（ignored，便于复核）
 - [`results.json`](results.json)：复核后提交的规范化结果
 - [`REPORT.md`](REPORT.md)：面向人的结论、优势和限制
+- [`ARTIFACTS.html`](ARTIFACTS.html)：8 个成功 run 的真实交付物离线浏览器，可预览、筛选并下载原文件
+- [`ARTIFACTS.html.sha256`](ARTIFACTS.html.sha256)：HTML 完整性哈希
 
-重新发布结果前应检查原始错误、单独重跑 grader，并确认 `results.json` 不含绝对路径或凭据。
+`.runs` 仍在本机时，可重新构建证据包：
+
+```powershell
+python .\benchmarks\minimax-m3-smoke\build_artifacts_html.py `
+  --copy-to "$HOME\Desktop\i-agent-MiniMax-M3-压测产物-2026-08-18.html"
+```
+
+Builder 会重新判分 8 个 workspace、核对登记的文件大小并在嵌入前扫描密钥和个人绝对路径。HTML 只收录白名单内的最终 Python/CSV/JSON/Markdown 产物与共享 fixture；不会收录 `.homes`、`.i-agent`、session、pycache 或原始 stdout/stderr。

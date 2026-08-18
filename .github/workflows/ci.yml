@@ -26,6 +26,8 @@ jobs:
         run: git diff --exit-code -- src/embedded.rs
       - name: Check formatting
         run: cargo fmt --check
+      - name: Check benchmark Python
+        run: python -m py_compile benchmarks/minimax-m3-smoke/grade.py benchmarks/minimax-m3-smoke/summarize.py benchmarks/minimax-m3-smoke/build_artifacts_html.py
       - name: Run tests
         run: cargo test --locked
       - name: Build release binary

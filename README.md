@@ -140,7 +140,7 @@ assets/
 
 2026-08-18 在同一 `MiniMax-M3` 上进行了两题 × 四 CLI 的探索性 smoke test：i-agent、Claude Code CLI、Codex CLI 与 OpenCode 均为 **26/26**；i-agent 总耗时 **132.7s**，其余三者为 **237.9–361.8s**，同时 i-agent 的总输入 token 最少。该结果只有单次小样本，证明的是本轮工程效率，不是通用能力排行榜。
 
-可复现台架、逐项数据、协议差异和限制见 [`benchmarks/minimax-m3-smoke/REPORT.md`](benchmarks/minimax-m3-smoke/REPORT.md)。
+可复现台架、逐项数据、协议差异和限制见 [`benchmarks/minimax-m3-smoke/REPORT.md`](benchmarks/minimax-m3-smoke/REPORT.md)；8 个成功 run 的真实交付物可在单文件离线浏览器 [`ARTIFACTS.html`](benchmarks/minimax-m3-smoke/ARTIFACTS.html) 中预览和下载。
 
 ## 许可证
 
