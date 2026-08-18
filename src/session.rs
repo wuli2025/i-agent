@@ -319,8 +319,8 @@ pub fn write_head(ws: &Path, branch: &str) {
 pub fn clear(ws: &Path) {
     let _ = std::fs::remove_file(file(ws));
     let _ = std::fs::remove_file(head_file(ws));
-    let mut g = writer().lock().unwrap_or_else(|e| e.into_inner());
-    *g = 1;
+    // id 只需在进程内单调递增；清空某个 workspace 时不能重置全局分配器，
+    // 否则另一个并行 workspace 正在写入时会拿到重复 id。
 }
 
 #[cfg(test)]
@@ -388,6 +388,38 @@ mod tests {
         );
         assert_eq!(log.branches().len(), 3);
         let _ = std::fs::remove_dir_all(&ws);
+    }
+
+    #[test]
+    fn clearing_other_workspace_does_not_reuse_ids() {
+        let root = tmp();
+        let primary = root.join("primary");
+        let other = root.join("other");
+        clear(&primary);
+        clear(&other);
+
+        let first = append_entry(
+            &primary,
+            MAIN,
+            None,
+            "msg",
+            None,
+            &Msg::text("user", "first"),
+        );
+        clear(&other);
+        let second = append_entry(
+            &primary,
+            MAIN,
+            Some(first),
+            "msg",
+            None,
+            &Msg::text("assistant", "second"),
+        );
+
+        assert!(second > first);
+        let log = Log::load(&primary);
+        assert_eq!(log.chain(second).len(), 2);
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
