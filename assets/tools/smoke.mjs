@@ -4,10 +4,11 @@
 // 输出: 单行 JSON 到 stdout（Rust 侧解析）。
 
 import { createRequire } from 'node:module';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { existsSync, readdirSync } from 'node:fs';
 import { homedir, platform } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { execFileSync } from 'node:child_process';
 
 const argv = process.argv.slice(2);
 const arg = (k, d = null) => {
@@ -27,17 +28,41 @@ const die = (msg, hint) => {
 };
 
 /* ---------- 定位 playwright 与 chromium（不强制用户预装到固定位置） ---------- */
+function npmGlobalRoot() {
+  const commands = platform() === 'win32' ? ['npm.cmd', 'npm'] : ['npm'];
+  for (const command of commands) {
+    try {
+      const root = execFileSync(command, ['root', '-g'], {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+        windowsHide: true,
+      }).trim();
+      if (root) return root;
+    } catch { /* 继续找下一个 npm 启动名 */ }
+  }
+  return null;
+}
+
 function loadPlaywright() {
-  const cands = [
+  const prefix = process.env.NPM_CONFIG_PREFIX;
+  const appData = process.env.APPDATA;
+  const scriptDir = dirname(fileURLToPath(import.meta.url));
+  const cands = [...new Set([
     process.env.I_AGENT_PLAYWRIGHT,
-    '/mnt/d/Users/mi/npm/node_modules/',
-    join(homedir(), '.npm-global/lib/node_modules/'),
+    npmGlobalRoot(),
+    appData && join(appData, 'npm/node_modules'),
+    prefix && join(prefix, 'node_modules'),
+    prefix && join(prefix, 'lib/node_modules'),
+    join(process.cwd(), 'node_modules'),
+    join(scriptDir, 'node_modules'),
+    join(homedir(), '.npm-global/lib/node_modules'),
+    join(homedir(), '.i-agent/node_modules'),
     '/usr/lib/node_modules/',
     '/usr/local/lib/node_modules/',
-  ].filter(Boolean);
+  ].filter(Boolean))];
   for (const base of cands) {
     try {
-      const req = createRequire(base.endsWith('/') ? base : base + '/');
+      const req = createRequire(join(base, '__i_agent_resolver.cjs'));
       return req('playwright');
     } catch { /* 继续找下一个 */ }
   }

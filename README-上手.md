@@ -12,7 +12,7 @@ export ANTHROPIC_BASE_URL="https://api.minimaxi.com/anthropic"
 export ANTHROPIC_DEFAULT_HAIKU_MODEL="MiniMax-M3"
 ```
 
-同一份 env 可以同时驱动 claude / codex / opencode / i-agent。
+这组 Anthropic 变量可直接驱动 Claude Code CLI、OpenCode（使用 Anthropic provider）和 i-agent。**Codex CLI 是例外**：它当前使用 OpenAI Responses 协议，不能直接请求 `/anthropic/v1/messages`；如需同模型对比，应把 Codex 配到 MiniMax 的 `https://api.minimaxi.com/v1/responses`，详见 [`benchmarks/minimax-m3-smoke/`](benchmarks/minimax-m3-smoke/)。
 
 也支持 OpenAI 兼容端点：
 

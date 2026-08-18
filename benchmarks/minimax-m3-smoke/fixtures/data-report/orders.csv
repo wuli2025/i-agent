@@ -1,0 +1,14 @@
+order_id,order_date,region,product,quantity,unit_price,status
+A001,2026-07-01, 华东 ,Notebook,2,12.50,paid
+A002,2026-07-01,华北,Pen,10,1.20,PAID
+A003,2026-07-02,华东,Notebook,1,12.50,cancelled
+A004,2026-07-03,华南,Folder,3,4.00,paid
+A005,2026-07-03,华北,Notebook,4,12.50,paid
+A006,2026-07-04,华南,Pen,5,1.20,refunded
+A007,2026-07-05,华东,Folder,2,4.00,paid
+ A002 ,2026-07-01,华北,Pen,10,1.20, paid
+A008,2026-07-06,华东,Pen,abc,1.20,paid
+A009,2026-07-07,华北,Notebook,1,-2.00,paid
+,2026-07-07,华南,Folder,1,4.00,paid
+A010,2026-07-08,华南,Notebook,2,12.50, paid
+A011,2026-02-30,华东,Pen,2,1.20,paid

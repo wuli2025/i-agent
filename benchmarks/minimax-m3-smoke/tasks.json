@@ -1,0 +1,10 @@
+{
+  "bugfix": {
+    "fixture": "fixtures/bugfix",
+    "prompt": "请阅读当前工作区的 TASK.md，完成其中全部要求并实际运行测试。只操作当前工作区，不要读取父目录或其他 benchmark 运行结果；完成后简要说明改动与验证。"
+  },
+  "data-report": {
+    "fixture": "fixtures/data-report",
+    "prompt": "请阅读当前工作区的 TASK.md，完成其中全部要求并自行校验产物。只操作当前工作区，不要读取父目录或其他 benchmark 运行结果；完成后简要说明产物与验证。"
+  }
+}

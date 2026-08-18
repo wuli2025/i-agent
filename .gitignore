@@ -1,6 +1,6 @@
 # Rust build artifacts
-源码/target/
-target/
+/target/
+/dist/
 
 # Local runtime state
 .i-agent/
@@ -10,10 +10,23 @@ target/
 .env
 .env.*
 !.env.example
+*key.txt
 
-# Logs and temporary files
+# Benchmark runtime data (only normalized results are tracked)
+/benchmarks/**/.runs/
+/benchmarks/**/.homes/
+/benchmarks/**/logs/
+/benchmarks/**/results.local.json
+
+# Local release bundles and historical package layout
+/bin/
+/源码/
+
+# Logs, Python caches and temporary files
 *.log
 *.tmp
+__pycache__/
+*.py[cod]
 
 # OS metadata
 .DS_Store

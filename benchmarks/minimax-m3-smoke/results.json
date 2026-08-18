@@ -1,0 +1,770 @@
+{
+  "generated_at": "2026-08-18T09:30:03.439482+00:00",
+  "scope": "single-run exploratory smoke test; two deterministic tasks per CLI",
+  "model": "MiniMax-M3",
+  "protocol_note": "i-agent, Claude Code and OpenCode use Anthropic Messages; Codex uses MiniMax Responses",
+  "environment": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.14.4",
+    "versions": {
+      "claude": "2.1.233 (Claude Code)",
+      "codex": "codex-cli 0.147.0",
+      "iagent": "i-agent 0.1.0",
+      "opencode": "1.17.19"
+    }
+  },
+  "runs": [
+    {
+      "task": "bugfix",
+      "agent": "claude",
+      "version": "2.1.233 (Claude Code)",
+      "protocol": "anthropic-messages",
+      "exit_code": 0,
+      "timed_out": false,
+      "wall_seconds": 184.7,
+      "grade": {
+        "task": "bugfix",
+        "score": 12.0,
+        "max_score": 12.0,
+        "passed": true,
+        "checks": [
+          {
+            "name": "module imports and exposes summarize",
+            "points": 1,
+            "max": 1,
+            "detail": "ok"
+          },
+          {
+            "name": "normalizes and aggregates SKU",
+            "points": 2,
+            "max": 2,
+            "detail": "ok"
+          },
+          {
+            "name": "uses exact aggregate-then-round money",
+            "points": 2,
+            "max": 2,
+            "detail": "ok"
+          },
+          {
+            "name": "handles returns and sorted output",
+            "points": 2,
+            "max": 2,
+            "detail": "ok"
+          },
+          {
+            "name": "validates SKU, price and discount",
+            "points": 3,
+            "max": 3,
+            "detail": "ok"
+          },
+          {
+            "name": "does not call float",
+            "points": 1,
+            "max": 1,
+            "detail": "ok"
+          },
+          {
+            "name": "passes public unittest suite",
+            "points": 1,
+            "max": 1,
+            "detail": "ok"
+          }
+        ]
+      },
+      "usage": {
+        "input_tokens": 80434,
+        "fresh_input_tokens": 11213,
+        "cached_input_tokens": 69221,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 7542,
+        "requests": 12
+      },
+      "artifacts": [
+        {
+          "name": "inventory.py",
+          "exists": true,
+          "bytes": 1485
+        },
+        {
+          "name": "test_inventory.py",
+          "exists": true,
+          "bytes": 3383
+        }
+      ]
+    },
+    {
+      "task": "bugfix",
+      "agent": "codex",
+      "version": "codex-cli 0.147.0",
+      "protocol": "openai-responses",
+      "exit_code": 0,
+      "timed_out": false,
+      "wall_seconds": 74.4,
+      "grade": {
+        "task": "bugfix",
+        "score": 12.0,
+        "max_score": 12.0,
+        "passed": true,
+        "checks": [
+          {
+            "name": "module imports and exposes summarize",
+            "points": 1,
+            "max": 1,
+            "detail": "ok"
+          },
+          {
+            "name": "normalizes and aggregates SKU",
+            "points": 2,
+            "max": 2,
+            "detail": "ok"
+          },
+          {
+            "name": "uses exact aggregate-then-round money",
+            "points": 2,
+            "max": 2,
+            "detail": "ok"
+          },
+          {
+            "name": "handles returns and sorted output",
+            "points": 2,
+            "max": 2,
+            "detail": "ok"
+          },
+          {
+            "name": "validates SKU, price and discount",
+            "points": 3,
+            "max": 3,
+            "detail": "ok"
+          },
+          {
+            "name": "does not call float",
+            "points": 1,
+            "max": 1,
+            "detail": "ok"
+          },
+          {
+            "name": "passes public unittest suite",
+            "points": 1,
+            "max": 1,
+            "detail": "ok"
+          }
+        ]
+      },
+      "usage": {
+        "input_tokens": 205956,
+        "fresh_input_tokens": 16117,
+        "cached_input_tokens": 189839,
+        "output_tokens": 2246
+      },
+      "artifacts": [
+        {
+          "name": "inventory.py",
+          "exists": true,
+          "bytes": 1381
+        },
+        {
+          "name": "test_inventory.py",
+          "exists": true,
+          "bytes": 638
+        }
+      ]
+    },
+    {
+      "task": "bugfix",
+      "agent": "iagent",
+      "version": "i-agent 0.1.0",
+      "protocol": "anthropic-messages",
+      "exit_code": 0,
+      "timed_out": false,
+      "wall_seconds": 53.2,
+      "grade": {
+        "task": "bugfix",
+        "score": 12.0,
+        "max_score": 12.0,
+        "passed": true,
+        "checks": [
+          {
+            "name": "module imports and exposes summarize",
+            "points": 1,
+            "max": 1,
+            "detail": "ok"
+          },
+          {
+            "name": "normalizes and aggregates SKU",
+            "points": 2,
+            "max": 2,
+            "detail": "ok"
+          },
+          {
+            "name": "uses exact aggregate-then-round money",
+            "points": 2,
+            "max": 2,
+            "detail": "ok"
+          },
+          {
+            "name": "handles returns and sorted output",
+            "points": 2,
+            "max": 2,
+            "detail": "ok"
+          },
+          {
+            "name": "validates SKU, price and discount",
+            "points": 3,
+            "max": 3,
+            "detail": "ok"
+          },
+          {
+            "name": "does not call float",
+            "points": 1,
+            "max": 1,
+            "detail": "ok"
+          },
+          {
+            "name": "passes public unittest suite",
+            "points": 1,
+            "max": 1,
+            "detail": "ok"
+          }
+        ]
+      },
+      "usage": {
+        "requests": 6,
+        "input_tokens": 33395,
+        "fresh_input_tokens": 7373,
+        "cached_input_tokens": 26022,
+        "output_tokens": 2643
+      },
+      "artifacts": [
+        {
+          "name": "inventory.py",
+          "exists": true,
+          "bytes": 2746
+        },
+        {
+          "name": "test_inventory.py",
+          "exists": true,
+          "bytes": 3903
+        }
+      ]
+    },
+    {
+      "task": "bugfix",
+      "agent": "opencode",
+      "version": "1.17.19",
+      "protocol": "anthropic-messages",
+      "exit_code": 0,
+      "timed_out": false,
+      "wall_seconds": 116.5,
+      "grade": {
+        "task": "bugfix",
+        "score": 12.0,
+        "max_score": 12.0,
+        "passed": true,
+        "checks": [
+          {
+            "name": "module imports and exposes summarize",
+            "points": 1,
+            "max": 1,
+            "detail": "ok"
+          },
+          {
+            "name": "normalizes and aggregates SKU",
+            "points": 2,
+            "max": 2,
+            "detail": "ok"
+          },
+          {
+            "name": "uses exact aggregate-then-round money",
+            "points": 2,
+            "max": 2,
+            "detail": "ok"
+          },
+          {
+            "name": "handles returns and sorted output",
+            "points": 2,
+            "max": 2,
+            "detail": "ok"
+          },
+          {
+            "name": "validates SKU, price and discount",
+            "points": 3,
+            "max": 3,
+            "detail": "ok"
+          },
+          {
+            "name": "does not call float",
+            "points": 1,
+            "max": 1,
+            "detail": "ok"
+          },
+          {
+            "name": "passes public unittest suite",
+            "points": 1,
+            "max": 1,
+            "detail": "ok"
+          }
+        ]
+      },
+      "usage": {
+        "requests": 11,
+        "input_tokens": 226567,
+        "fresh_input_tokens": 23815,
+        "cached_input_tokens": 202752,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 5733
+      },
+      "artifacts": [
+        {
+          "name": "inventory.py",
+          "exists": true,
+          "bytes": 1527
+        },
+        {
+          "name": "test_inventory.py",
+          "exists": true,
+          "bytes": 2743
+        }
+      ]
+    },
+    {
+      "task": "data-report",
+      "agent": "claude",
+      "version": "2.1.233 (Claude Code)",
+      "protocol": "anthropic-messages",
+      "exit_code": 0,
+      "timed_out": false,
+      "wall_seconds": 177.1,
+      "grade": {
+        "task": "data-report",
+        "score": 14.0,
+        "max_score": 14.0,
+        "passed": true,
+        "checks": [
+          {
+            "name": "creates all four deliverables",
+            "points": 1,
+            "max": 1,
+            "detail": "ok"
+          },
+          {
+            "name": "uses exact cleaned CSV schema",
+            "points": 1,
+            "max": 1,
+            "detail": "ok"
+          },
+          {
+            "name": "keeps eight valid unique rows in order",
+            "points": 2,
+            "max": 2,
+            "detail": "ok"
+          },
+          {
+            "name": "normalizes fields and money formatting",
+            "points": 2,
+            "max": 2,
+            "detail": "ok"
+          },
+          {
+            "name": "computes exact line totals",
+            "points": 1,
+            "max": 1,
+            "detail": "ok"
+          },
+          {
+            "name": "records the four invalid source rows",
+            "points": 2,
+            "max": 2,
+            "detail": "ok"
+          },
+          {
+            "name": "produces the exact summary",
+            "points": 3,
+            "max": 3,
+            "detail": "ok"
+          },
+          {
+            "name": "writes a consistent Markdown report",
+            "points": 2,
+            "max": 2,
+            "detail": "ok"
+          }
+        ]
+      },
+      "usage": {
+        "input_tokens": 136547,
+        "fresh_input_tokens": 20067,
+        "cached_input_tokens": 116480,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 11306,
+        "requests": 15
+      },
+      "artifacts": [
+        {
+          "name": "cleaned_orders.csv",
+          "exists": true,
+          "bytes": 471
+        },
+        {
+          "name": "rejected_orders.csv",
+          "exists": true,
+          "bytes": 199
+        },
+        {
+          "name": "summary.json",
+          "exists": true,
+          "bytes": 351
+        },
+        {
+          "name": "report.md",
+          "exists": true,
+          "bytes": 351
+        }
+      ]
+    },
+    {
+      "task": "data-report",
+      "agent": "codex",
+      "version": "codex-cli 0.147.0",
+      "protocol": "openai-responses",
+      "exit_code": 0,
+      "timed_out": false,
+      "wall_seconds": 204.4,
+      "grade": {
+        "task": "data-report",
+        "score": 14.0,
+        "max_score": 14.0,
+        "passed": true,
+        "checks": [
+          {
+            "name": "creates all four deliverables",
+            "points": 1,
+            "max": 1,
+            "detail": "ok"
+          },
+          {
+            "name": "uses exact cleaned CSV schema",
+            "points": 1,
+            "max": 1,
+            "detail": "ok"
+          },
+          {
+            "name": "keeps eight valid unique rows in order",
+            "points": 2,
+            "max": 2,
+            "detail": "ok"
+          },
+          {
+            "name": "normalizes fields and money formatting",
+            "points": 2,
+            "max": 2,
+            "detail": "ok"
+          },
+          {
+            "name": "computes exact line totals",
+            "points": 1,
+            "max": 1,
+            "detail": "ok"
+          },
+          {
+            "name": "records the four invalid source rows",
+            "points": 2,
+            "max": 2,
+            "detail": "ok"
+          },
+          {
+            "name": "produces the exact summary",
+            "points": 3,
+            "max": 3,
+            "detail": "ok"
+          },
+          {
+            "name": "writes a consistent Markdown report",
+            "points": 2,
+            "max": 2,
+            "detail": "ok"
+          }
+        ]
+      },
+      "usage": {
+        "input_tokens": 389008,
+        "fresh_input_tokens": 22514,
+        "cached_input_tokens": 366494,
+        "output_tokens": 13871
+      },
+      "artifacts": [
+        {
+          "name": "cleaned_orders.csv",
+          "exists": true,
+          "bytes": 480
+        },
+        {
+          "name": "rejected_orders.csv",
+          "exists": true,
+          "bytes": 173
+        },
+        {
+          "name": "summary.json",
+          "exists": true,
+          "bytes": 349
+        },
+        {
+          "name": "report.md",
+          "exists": true,
+          "bytes": 367
+        }
+      ]
+    },
+    {
+      "task": "data-report",
+      "agent": "iagent",
+      "version": "i-agent 0.1.0",
+      "protocol": "anthropic-messages",
+      "exit_code": 0,
+      "timed_out": false,
+      "wall_seconds": 79.5,
+      "grade": {
+        "task": "data-report",
+        "score": 14.0,
+        "max_score": 14.0,
+        "passed": true,
+        "checks": [
+          {
+            "name": "creates all four deliverables",
+            "points": 1,
+            "max": 1,
+            "detail": "ok"
+          },
+          {
+            "name": "uses exact cleaned CSV schema",
+            "points": 1,
+            "max": 1,
+            "detail": "ok"
+          },
+          {
+            "name": "keeps eight valid unique rows in order",
+            "points": 2,
+            "max": 2,
+            "detail": "ok"
+          },
+          {
+            "name": "normalizes fields and money formatting",
+            "points": 2,
+            "max": 2,
+            "detail": "ok"
+          },
+          {
+            "name": "computes exact line totals",
+            "points": 1,
+            "max": 1,
+            "detail": "ok"
+          },
+          {
+            "name": "records the four invalid source rows",
+            "points": 2,
+            "max": 2,
+            "detail": "ok"
+          },
+          {
+            "name": "produces the exact summary",
+            "points": 3,
+            "max": 3,
+            "detail": "ok"
+          },
+          {
+            "name": "writes a consistent Markdown report",
+            "points": 2,
+            "max": 2,
+            "detail": "ok"
+          }
+        ]
+      },
+      "usage": {
+        "requests": 11,
+        "input_tokens": 76546,
+        "fresh_input_tokens": 9738,
+        "cached_input_tokens": 66808,
+        "output_tokens": 4425
+      },
+      "artifacts": [
+        {
+          "name": "cleaned_orders.csv",
+          "exists": true,
+          "bytes": 480
+        },
+        {
+          "name": "rejected_orders.csv",
+          "exists": true,
+          "bytes": 180
+        },
+        {
+          "name": "summary.json",
+          "exists": true,
+          "bytes": 349
+        },
+        {
+          "name": "report.md",
+          "exists": true,
+          "bytes": 483
+        }
+      ]
+    },
+    {
+      "task": "data-report",
+      "agent": "opencode",
+      "version": "1.17.19",
+      "protocol": "anthropic-messages",
+      "exit_code": 0,
+      "timed_out": false,
+      "wall_seconds": 121.4,
+      "grade": {
+        "task": "data-report",
+        "score": 14.0,
+        "max_score": 14.0,
+        "passed": true,
+        "checks": [
+          {
+            "name": "creates all four deliverables",
+            "points": 1,
+            "max": 1,
+            "detail": "ok"
+          },
+          {
+            "name": "uses exact cleaned CSV schema",
+            "points": 1,
+            "max": 1,
+            "detail": "ok"
+          },
+          {
+            "name": "keeps eight valid unique rows in order",
+            "points": 2,
+            "max": 2,
+            "detail": "ok"
+          },
+          {
+            "name": "normalizes fields and money formatting",
+            "points": 2,
+            "max": 2,
+            "detail": "ok"
+          },
+          {
+            "name": "computes exact line totals",
+            "points": 1,
+            "max": 1,
+            "detail": "ok"
+          },
+          {
+            "name": "records the four invalid source rows",
+            "points": 2,
+            "max": 2,
+            "detail": "ok"
+          },
+          {
+            "name": "produces the exact summary",
+            "points": 3,
+            "max": 3,
+            "detail": "ok"
+          },
+          {
+            "name": "writes a consistent Markdown report",
+            "points": 2,
+            "max": 2,
+            "detail": "ok"
+          }
+        ]
+      },
+      "usage": {
+        "requests": 18,
+        "input_tokens": 363410,
+        "fresh_input_tokens": 24823,
+        "cached_input_tokens": 338587,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 6355
+      },
+      "artifacts": [
+        {
+          "name": "cleaned_orders.csv",
+          "exists": true,
+          "bytes": 471
+        },
+        {
+          "name": "rejected_orders.csv",
+          "exists": true,
+          "bytes": 205
+        },
+        {
+          "name": "summary.json",
+          "exists": true,
+          "bytes": 351
+        },
+        {
+          "name": "report.md",
+          "exists": true,
+          "bytes": 351
+        }
+      ]
+    }
+  ],
+  "totals": [
+    {
+      "agent": "iagent",
+      "tasks_passed": 2,
+      "tasks_run": 2,
+      "score": 26.0,
+      "max_score": 26.0,
+      "wall_seconds": 132.7,
+      "usage_complete": true,
+      "input_tokens": 109941,
+      "fresh_input_tokens": 17111,
+      "cached_input_tokens": 92830,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 7068,
+      "requests": 17
+    },
+    {
+      "agent": "claude",
+      "tasks_passed": 2,
+      "tasks_run": 2,
+      "score": 26.0,
+      "max_score": 26.0,
+      "wall_seconds": 361.8,
+      "usage_complete": true,
+      "input_tokens": 216981,
+      "fresh_input_tokens": 31280,
+      "cached_input_tokens": 185701,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 18848,
+      "requests": 27
+    },
+    {
+      "agent": "codex",
+      "tasks_passed": 2,
+      "tasks_run": 2,
+      "score": 26.0,
+      "max_score": 26.0,
+      "wall_seconds": 278.8,
+      "usage_complete": true,
+      "input_tokens": 594964,
+      "fresh_input_tokens": 38631,
+      "cached_input_tokens": 556333,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 16117,
+      "requests": null
+    },
+    {
+      "agent": "opencode",
+      "tasks_passed": 2,
+      "tasks_run": 2,
+      "score": 26.0,
+      "max_score": 26.0,
+      "wall_seconds": 237.9,
+      "usage_complete": true,
+      "input_tokens": 589977,
+      "fresh_input_tokens": 48638,
+      "cached_input_tokens": 541339,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 12088,
+      "requests": 29
+    }
+  ]
+}
