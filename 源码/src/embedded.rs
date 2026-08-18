@@ -1,0 +1,20 @@
+// 本文件由 scripts/gen_embedded.mjs 自动生成，勿手改
+pub static ASSETS: &[(&str, &str)] = &[
+    ("skills/game/SKILL.md", include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/skills/game/SKILL.md"))),
+    ("skills/game/templates/engine_head.html", include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/skills/game/templates/engine_head.html"))),
+    ("skills/game/templates/engine_tail.html", include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/skills/game/templates/engine_tail.html"))),
+    ("skills/game/templates/vn_engine.html", include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/skills/game/templates/vn_engine.html"))),
+    ("skills/knowledge/SKILL.md", include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/skills/knowledge/SKILL.md"))),
+    ("skills/longform/SKILL.md", include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/skills/longform/SKILL.md"))),
+    ("skills/longform/templates/bible.md", include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/skills/longform/templates/bible.md"))),
+    ("skills/longform/templates/consistency_check.md", include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/skills/longform/templates/consistency_check.md"))),
+    ("skills/longform/templates/outline.md", include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/skills/longform/templates/outline.md"))),
+    ("skills/longform/templates/style_card.md", include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/skills/longform/templates/style_card.md"))),
+    ("skills/motionfx/SKILL.md", include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/skills/motionfx/SKILL.md"))),
+    ("skills/office/SKILL.md", include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/skills/office/SKILL.md"))),
+    ("skills/office/templates/report.html", include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/skills/office/templates/report.html"))),
+    ("skills/slides/SKILL.md", include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/skills/slides/SKILL.md"))),
+    ("skills/slides/templates/deck.html", include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/skills/slides/templates/deck.html"))),
+    ("skills/webpage/SKILL.md", include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/skills/webpage/SKILL.md"))),
+    ("tools/smoke.mjs", include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/tools/smoke.mjs"))),
+];

@@ -1,0 +1,471 @@
+;
+
+/* ============================================================
+   引擎层 —— 以下代码与具体游戏无关，替换 GAME 时不要改动
+   ============================================================ */
+(function () {
+  "use strict";
+
+  var $ = function (s) { return document.querySelector(s); };
+  var CFG = GAME.config || {};
+  var SAVE_KEY = "vn_save_" + (GAME.meta.title || "untitled");
+
+  /* 场景索引 */
+  var sceneMap = {};
+  GAME.scenes.forEach(function (s) { sceneMap[s.id] = s; });
+
+  /* 运行时状态 */
+  var S = null;          /* {scene, stats, affinity, flags} */
+  var cur = null;        /* 当前场景对象 */
+  var seq = 0;           /* 场景序号，防异步回调窜台 */
+
+  /* 打字机状态 */
+  var typing = false, typeTimer = null, typeCb = null, pendingPlain = "";
+
+  /* 快进状态 */
+  var fastHold = false, fastToggle = false;
+  function isFast() { return fastHold || fastToggle; }
+
+  /* 背景双层 */
+  var bgLayers = [$("#bg-a"), $("#bg-b")], bgActive = 0;
+
+  /* ---------- 状态初始化 / 存档 ---------- */
+  function newState() {
+    var st = { scene: GAME.start || GAME.scenes[0].id, stats: {}, affinity: {}, flags: {} };
+    (GAME.stats || []).forEach(function (d) { st.stats[d.key] = d.init || 0; });
+    (GAME.affinity || []).forEach(function (d) { st.affinity[d.key] = d.init || 0; });
+    (GAME.flags || []).forEach(function (f) { st.flags[flagKey(f)] = false; });
+    return st;
+  }
+  function save() {
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {}
+  }
+  function loadSave() {
+    try {
+      var raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return null;
+      var st = JSON.parse(raw);
+      if (!st || !sceneMap[st.scene]) return null;
+      return st;
+    } catch (e) { return null; }
+  }
+  function clearSave() {
+    try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+  }
+
+  /* ---------- 旗标定义兼容：支持 {key,name} 或纯字符串 ---------- */
+  function flagKey(f) { return typeof f === "string" ? f : f.key; }
+  function flagName(k) {
+    var defs = GAME.flags || [];
+    for (var i = 0; i < defs.length; i++) {
+      if (flagKey(defs[i]) === k) {
+        return (typeof defs[i] === "string") ? defs[i] : (defs[i].name || defs[i].key);
+      }
+    }
+    return k;
+  }
+
+  /* ---------- 条件表达式求值：new Function 限定作用域 ---------- */
+  function evalCond(expr) {
+    if (!expr) return true;
+    try {
+      return !!(new Function("stats", "affinity", "flags", "return (" + expr + ")"))(
+        S.stats, S.affinity, S.flags
+      );
+    } catch (e) {
+      console.warn("条件求值失败: " + expr, e);
+      return false;
+    }
+  }
+
+  /* ---------- 数值变化：stats -> affinity -> flags 依次匹配 ---------- */
+  function applyEffects(eff) {
+    if (!eff) return;
+    Object.keys(eff).forEach(function (k) {
+      var v = eff[k];
+      if (S.stats.hasOwnProperty(k)) {
+        var def = null;
+        (GAME.stats || []).forEach(function (d) { if (d.key === k) def = d; });
+        var max = (def && def.max) || 100;
+        S.stats[k] = Math.max(0, Math.min(max, S.stats[k] + v));
+        toast((v >= 0 ? "+" : "") + v + " " + ((def && def.name) || k), v >= 0);
+      } else if (S.affinity.hasOwnProperty(k)) {
+        var adef = null;
+        (GAME.affinity || []).forEach(function (d) { if (d.key === k) adef = d; });
+        S.affinity[k] += v;
+        toast((v >= 0 ? "+" : "") + v + " " + ((adef && adef.name) || k) + "好感", v >= 0);
+      } else {
+        S.flags[k] = !!v;
+        toast((v ? "获得 · " : "失去 · ") + flagName(k), !!v);
+      }
+    });
+    renderPanel();
+  }
+
+  /* ---------- 飘字提示 ---------- */
+  function toast(text, positive) {
+    var el = document.createElement("div");
+    el.className = "toast " + (positive ? "pos" : "neg");
+    el.textContent = text;
+    $("#toasts").appendChild(el);
+    setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 1700);
+  }
+
+  /* ---------- 数值面板 ---------- */
+  function renderPanel() {
+    if (!S) return;
+    var h = "";
+    if ((GAME.stats || []).length) {
+      h += '<div class="p-sec">属性</div>';
+      GAME.stats.forEach(function (d) {
+        var v = S.stats[d.key], m = d.max || 100;
+        var pct = Math.max(0, Math.min(100, v / m * 100));
+        h += '<div class="p-row"><span>' + d.name + '</span><span class="p-val">' + v + '</span></div>';
+        h += '<div class="p-bar"><i style="width:' + pct + '%"></i></div>';
+      });
+    }
+    if ((GAME.affinity || []).length) {
+      h += '<div class="p-sec">好感</div>';
+      GAME.affinity.forEach(function (d) {
+        h += '<div class="p-row"><span>' + d.name + '</span><span class="p-val">' + S.affinity[d.key] + '</span></div>';
+      });
+    }
+    h += '<div class="p-sec">旗标</div>';
+    var got = (GAME.flags || []).filter(function (f) { return S.flags[flagKey(f)]; });
+    if (got.length) {
+      h += got.map(function (f) { return '<span class="p-tag">' + flagName(flagKey(f)) + '</span>'; }).join("");
+    } else {
+      h += '<span class="p-none">暂无</span>';
+    }
+    $("#panel-body").innerHTML = h;
+  }
+
+  /* ---------- 背景与转场 ---------- */
+  function setBg(sc) {
+    if (!sc.bg) return;
+    var css = sc.bg.indexOf("gradient(") >= 0 ? sc.bg : 'url("' + sc.bg + '")';
+    var t = sc.transition || CFG.transition || "fade";
+    var next = bgLayers[1 - bgActive], curL = bgLayers[bgActive];
+    next.style.backgroundImage = css;
+    next.style.zIndex = 2;
+    curL.style.zIndex = 1;
+    next.className = "bg";
+    void next.offsetWidth;            /* 强制重排，保证动画可重触发 */
+    next.className = "bg on t-" + t;
+    setTimeout(function () { curL.className = "bg"; }, 1100);
+    bgActive = 1 - bgActive;
+  }
+
+  /* ---------- 立绘槽位 ---------- */
+  function setSprites(sc) {
+    if (!("sprites" in sc)) return;   /* 未声明则沿用上一场景 */
+    var sp = sc.sprites || {};
+    ["left", "center", "right"].forEach(function (pos) {
+      var slot = $("#sp-" + pos);
+      var src = sp[pos];
+      if (src) {
+        slot.onerror = function () { slot.classList.remove("show"); };
+        slot.src = src;
+        slot.classList.add("show");
+      } else {
+        slot.classList.remove("show");
+        slot.removeAttribute("src");
+      }
+    });
+  }
+
+  /* ---------- 强调动效：[shake] / [flash] ---------- */
+  function triggerFx(name) {
+    if (name === "shake") {
+      var d = $("#dialog");
+      d.classList.remove("shake");
+      void d.offsetWidth;
+      d.classList.add("shake");
+    } else if (name === "flash") {
+      var f = $("#flash");
+      f.classList.remove("go");
+      void f.offsetWidth;
+      f.classList.add("go");
+    }
+  }
+
+  /* ---------- 打字机：文本切分为 文字段 与 动效标记 ---------- */
+  function parseSegments(text) {
+    var parts = String(text).split(/(\[shake\]|\[flash\])/);
+    var segs = [];
+    parts.forEach(function (p) {
+      if (p === "[shake]") segs.push({ fx: "shake" });
+      else if (p === "[flash]") segs.push({ fx: "flash" });
+      else if (p) segs.push({ txt: p });
+    });
+    return segs;
+  }
+
+  function typeText(text, done) {
+    clearTimeout(typeTimer);
+    var segs = parseSegments(text);
+    pendingPlain = segs.filter(function (s) { return s.txt; })
+                       .map(function (s) { return s.txt; }).join("");
+    typeCb = done;
+    typing = true;
+    var el = $("#dlg-text");
+    el.textContent = "";
+    var si = 0, ci = 0, my = seq;
+
+    function step() {
+      if (seq !== my || !typing) return;
+      if (si >= segs.length) { finishType(); return; }
+      var seg = segs[si];
+      if (seg.fx) { triggerFx(seg.fx); si++; step(); return; }
+      el.textContent += seg.txt.charAt(ci++);
+      if (ci >= seg.txt.length) { si++; ci = 0; }
+      typeTimer = setTimeout(step, isFast() ? 6 : (CFG.typeSpeed || 30));
+    }
+    step();
+  }
+
+  /* 立即完成打字（点击跳过 / 快进） */
+  function finishType() {
+    if (!typing) return;
+    typing = false;
+    clearTimeout(typeTimer);
+    $("#dlg-text").textContent = pendingPlain;
+    var cb = typeCb;
+    typeCb = null;
+    if (cb) cb();
+  }
+
+  /* ---------- 场景推进 ---------- */
+  function showScene(id, opts) {
+    opts = opts || {};
+    if (id === "END") { doEnding(); return; }
+    var sc = sceneMap[id];
+    if (!sc) { console.error("场景不存在: " + id); return; }
+    cur = sc;
+    var my = ++seq;
+
+    if (sc.effects && !opts.silent) applyEffects(sc.effects);
+    S.scene = id;
+    save();
+
+    setBg(sc);
+    setSprites(sc);
+
+    var nb = $("#namebox");
+    if (sc.speaker) { nb.textContent = sc.speaker; nb.classList.add("show"); }
+    else { nb.classList.remove("show"); }
+
+    var ch = $("#choices");
+    ch.innerHTML = "";
+    ch.classList.remove("show");
+    $("#next-hint").classList.remove("show");
+
+    typeText(sc.text || "", function () {
+      if (seq !== my) return;
+      if (sc.choices && sc.choices.length) renderChoices(sc);
+      else $("#next-hint").classList.add("show");
+    });
+  }
+
+  function renderChoices(sc) {
+    var box = $("#choices");
+    box.innerHTML = "";
+    sc.choices.forEach(function (c) {
+      var ok = evalCond(c.cond);
+      var mode = c.condMode || CFG.condMode || "hide";
+      if (!ok && mode === "hide") return;
+      var b = document.createElement("button");
+      b.className = "choice" + (ok ? "" : " locked");
+      b.textContent = (ok ? "" : "〔未达成〕") + c.text;
+      if (ok) {
+        b.onclick = function (e) {
+          e.stopPropagation();
+          pickChoice(c);
+        };
+      } else {
+        b.disabled = true;
+      }
+      box.appendChild(b);
+    });
+    box.classList.add("show");
+  }
+
+  function pickChoice(c) {
+    applyEffects(c.effects);
+    if (c.check) { doCheck(c.check); return; }
+    if (c.goto) showScene(c.goto);
+  }
+
+  /* 无选项场景的推进 */
+  function advance() {
+    if (!cur) return;
+    if (typing) { finishType(); return; }
+    if (cur.choices && cur.choices.length) return;   /* 有选项必须点选项 */
+    var nx = cur.next;
+    if (!nx) return;
+    if (nx === "END") doEnding();
+    else showScene(nx);
+  }
+
+  /* ---------- 属性检定：属性值 + 随机骰(1..rand) 对抗难度 ---------- */
+  function doCheck(c) {
+    var def = null;
+    (GAME.stats || []).forEach(function (d) { if (d.key === c.stat) def = d; });
+    var name = (def && def.name) || c.stat;
+    var base = S.stats[c.stat] || 0;
+    var roll = 1 + Math.floor(Math.random() * (c.rand || 20));
+    var total = base + roll;
+    var ok = total >= c.difficulty;
+
+    $("#check-title").textContent = name + " 检定";
+    $("#check-detail").textContent =
+      name + " " + base + " + 骰点 " + roll + " = " + total + "（难度 " + c.difficulty + "）";
+    var r = $("#check-result");
+    r.textContent = ok ? "检定成功" : "检定失败";
+    r.className = ok ? "ok" : "bad";
+    $("#check-modal").classList.add("show");
+
+    $("#check-go").onclick = function (e) {
+      e.stopPropagation();
+      $("#check-modal").classList.remove("show");
+      applyEffects(ok ? c.successEffects : c.failEffects);
+      showScene(ok ? c.success : c.fail);
+    };
+  }
+
+  /* ---------- 结局裁定：满足 cond 者取 weight 最高 ---------- */
+  function judgeEnding() {
+    var best = null;
+    (GAME.endings || []).forEach(function (e) {
+      if (evalCond(e.cond)) {
+        if (!best || (e.weight || 0) > (best.weight || 0)) best = e;
+      }
+    });
+    return best;
+  }
+
+  function recapHTML() {
+    var h = "";
+    if ((GAME.stats || []).length) {
+      h += '<div class="r-sec">最终属性</div>';
+      h += GAME.stats.map(function (d) { return d.name + " " + S.stats[d.key]; }).join(" · ");
+    }
+    if ((GAME.affinity || []).length) {
+      h += '<div class="r-sec">最终好感</div>';
+      h += GAME.affinity.map(function (d) { return d.name + " " + S.affinity[d.key]; }).join(" · ");
+    }
+    var got = (GAME.flags || []).filter(function (f) { return S.flags[flagKey(f)]; });
+    h += '<div class="r-sec">达成旗标</div>';
+    h += got.length ? got.map(function (f) { return flagName(flagKey(f)); }).join(" · ") : "无";
+    return h;
+  }
+
+  function doEnding() {
+    seq++;
+    typing = false;
+    clearTimeout(typeTimer);
+    var e = judgeEnding();
+    clearSave();
+    $("#end-title").textContent = e ? e.title : "未完待续";
+    $("#end-body").textContent = e ? e.body :
+      "没有匹配到任何结局，请检查 endings 是否包含 cond:\"true\" 的兜底项。";
+    $("#end-recap").innerHTML = recapHTML();
+    switchScreen("ending-screen");
+  }
+
+  /* ---------- 屏幕切换 ---------- */
+  function switchScreen(id) {
+    ["title-screen", "game-screen", "ending-screen"].forEach(function (s) {
+      $("#" + s).classList.toggle("active", s === id);
+    });
+  }
+
+  function showTitle() {
+    switchScreen("title-screen");
+    $("#btn-continue").style.display = loadSave() ? "" : "none";
+  }
+
+  function startNew() {
+    S = newState();
+    fastToggle = false;
+    $("#fast-tip").classList.remove("show");
+    renderPanel();
+    switchScreen("game-screen");
+    showScene(S.scene);
+  }
+
+  function continueGame() {
+    var st = loadSave();
+    if (!st) { startNew(); return; }
+    S = st;
+    fastToggle = false;
+    $("#fast-tip").classList.remove("show");
+    renderPanel();
+    switchScreen("game-screen");
+    showScene(S.scene, { silent: true });   /* 读档回到场景，不重复触发进场 effects */
+  }
+
+  /* ---------- 输入绑定 ---------- */
+  $("#btn-start").onclick = startNew;
+  $("#btn-continue").onclick = continueGame;
+  $("#btn-restart").onclick = startNew;
+  $("#btn-title").onclick = showTitle;
+
+  /* 单击推进：打字中则先跳过 */
+  $("#game-screen").addEventListener("click", function () {
+    if ($("#check-modal").classList.contains("show")) return;
+    if (typing) { finishType(); return; }
+    advance();
+  });
+
+  /* 双击切换快进 */
+  $("#game-screen").addEventListener("dblclick", function () {
+    fastToggle = !fastToggle;
+    $("#fast-tip").classList.toggle("show", fastToggle);
+  });
+
+  /* 面板开关（阻止冒泡，避免推进剧情） */
+  $("#hud-btn").addEventListener("click", function (e) {
+    e.stopPropagation();
+    renderPanel();
+    $("#panel").classList.toggle("show");
+  });
+  $("#panel").addEventListener("click", function (e) { e.stopPropagation(); });
+  $("#check-modal").addEventListener("click", function (e) { e.stopPropagation(); });
+
+  /* 键盘：Ctrl 按住快进，空格 / 回车推进 */
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Control") fastHold = true;
+    if ((e.key === " " || e.key === "Enter") &&
+        $("#game-screen").classList.contains("active") &&
+        !$("#check-modal").classList.contains("show")) {
+      e.preventDefault();
+      if (typing) finishType();
+      else advance();
+    }
+  });
+  document.addEventListener("keyup", function (e) {
+    if (e.key === "Control") fastHold = false;
+  });
+
+  /* 快进主循环：每 260ms 自动推进一步（不越过选项与检定） */
+  setInterval(function () {
+    if (!isFast()) return;
+    if (!$("#game-screen").classList.contains("active")) return;
+    if ($("#check-modal").classList.contains("show")) return;
+    if (typing) { finishType(); return; }
+    if (cur && cur.choices && cur.choices.length) return;
+    advance();
+  }, 260);
+
+  /* ---------- 启动 ---------- */
+  document.title = GAME.meta.title || "视觉小说";
+  $("#title-name").textContent = GAME.meta.title || "";
+  $("#title-author").textContent = GAME.meta.author || "";
+  $("#title-screen").style.background = GAME.meta.cover || "var(--ink)";
+  $("#ending-screen").style.background = GAME.meta.cover || "var(--ink)";
+  showTitle();
+})();
+</script>
+</body>
+</html>

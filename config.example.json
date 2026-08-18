@@ -1,0 +1,7 @@
+{
+  "context_window": 32768,
+  "max_turns": 48,
+  "providers": [
+    { "name": "minimax", "base": "https://api.minimaxi.com/anthropic", "protocol": "anthropic", "model": "MiniMax-M3", "key_env": "MINIMAX_API_KEY" }
+  ]
+}

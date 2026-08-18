@@ -1,0 +1,20 @@
+[package]
+name = "i-agent"
+version = "0.1.0"
+edition = "2021"
+description = "轻量办公主力 agent：短上下文国产模型友好，游戏/PPT/办公/长文本全能"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+ureq = { version = "2.10", default-features = false, features = ["tls"] }
+regex-lite = "0.1"
+ignore = "0.4"
+globset = "0.4"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

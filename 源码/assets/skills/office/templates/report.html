@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>数据报告</title>
+<style>
+:root {
+  --bg: #f7f6f2; --fg: #1d2733; --muted: #66707c; --accent: #2c4661;
+  --accent-2: #6d8aa5; --accent-3: #a8bccc; --accent-4: #c9a86a; --accent-5: #7d9b8a;
+  --line: #e0e0da; --card: #ffffff; --up: #2f7d5a; --down: #a54242;
+  --shadow: 0 2px 12px rgba(29,39,51,.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14181e; --fg: #dde3ea; --muted: #8a95a3; --accent: #7fa3c4;
+    --accent-2: #5b7a96; --accent-3: #3d5468; --accent-4: #b09361; --accent-5: #6e8d7c;
+    --line: #2a323c; --card: #1a2028;
+    --up: #5fae88; --down: #c97b7b; --shadow: 0 2px 12px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f7f6f2; --fg: #1d2733; --muted: #66707c; --accent: #2c4661;
+  --accent-2: #6d8aa5; --accent-3: #a8bccc; --accent-4: #c9a86a; --accent-5: #7d9b8a;
+  --line: #e0e0da; --card: #ffffff; --up: #2f7d5a; --down: #a54242;
+  --shadow: 0 2px 12px rgba(29,39,51,.06);
+}
+:root[data-theme="dark"] {
+  --bg: #14181e; --fg: #dde3ea; --muted: #8a95a3; --accent: #7fa3c4;
+  --accent-2: #5b7a96; --accent-3: #3d5468; --accent-4: #b09361; --accent-5: #6e8d7c;
+  --line: #2a323c; --card: #1a2028; --up: #5fae88; --down: #c97b7b;
+  --shadow: 0 2px 12px rgba(0,0,0,.3);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
+  line-height: 1.7; padding: 40px 20px;
+}
+.wrap { max-width: 960px; margin: 0 auto; }
+header { border-bottom: 3px solid var(--accent); padding-bottom: 18px; margin-bottom: 28px; }
+header h1 { font-size: clamp(24px, 4vw, 34px); font-weight: 700; }
+header .date { color: var(--muted); font-size: 14px; margin-top: 6px; }
+.summary {
+  background: var(--card); border-left: 4px solid var(--accent);
+  border-radius: 0 8px 8px 0; padding: 16px 20px;
+  margin-bottom: 28px; box-shadow: var(--shadow); font-size: 15px;
+}
+h2.sec {
+  font-size: 19px; margin: 34px 0 16px;
+  padding-left: 12px; border-left: 4px solid var(--accent);
+}
+/* 指标卡片 */
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+.metric {
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+  padding: 16px 18px; box-shadow: var(--shadow);
+}
+.metric .lb { font-size: 13px; color: var(--muted); }
+.metric .vl { font-size: 30px; font-weight: 700; color: var(--accent); margin: 4px 0; font-variant-numeric: tabular-nums; }
+.metric .dt { font-size: 13px; font-weight: 600; }
+.metric .dt.up { color: var(--up); }
+.metric .dt.down { color: var(--down); }
+/* 图表卡片 */
+.chart-card {
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+  padding: 18px 20px; margin-bottom: 18px; box-shadow: var(--shadow);
+  overflow-x: auto;
+}
+.chart-card h3 { font-size: 15px; margin-bottom: 12px; color: var(--fg); }
+.chart-card svg { display: block; width: 100%; height: auto; max-width: 880px; }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+.legend .it { display: flex; align-items: center; gap: 5px; }
+.legend .sw { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+/* 表格 */
+.tbl-card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; margin-bottom: 18px; box-shadow: var(--shadow); overflow-x: auto; }
+.tbl-card h3 { font-size: 15px; margin-bottom: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { color: var(--accent); font-weight: 600; background: color-mix(in srgb, var(--accent) 6%, transparent); }
+tbody tr:hover { background: color-mix(in srgb, var(--accent) 4%, transparent); }
+/* 结论 */
+ol.concl { padding-left: 22px; }
+ol.concl li { margin-bottom: 10px; font-size: 15px; }
+footer { margin-top: 40px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+/* 打印 */
+@media print {
+  :root, :root[data-theme="dark"] {
+    --bg: #fff; --fg: #1d2733; --card: #fff; --line: #ccc;
+    --accent: #2c4661; --muted: #555; --shadow: none;
+  }
+  body { padding: 0; }
+  .chart-card, .tbl-card, .metric { break-inside: avoid; box-shadow: none; }
+}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<script>
+"use strict";
+
+/* ================================================================
+   REPORT 数据：生成报告时只需替换本对象。
+   metrics.delta 以 + 或 - 开头，自动染色（+绿 -红），可省略。
+   charts.type 取 bar | line | pie；labels 与 values 等长。
+   ================================================================ */
+const REPORT = {
+  title: "二季度销售数据报告",
+  date: "2026-07-13",
+  summary: "二季度总销售额 1,284 万元，环比增长 18.6%。华东区贡献最大，新客户占比显著提升，但退货率略有上升，需在三季度重点关注售后流程。",
+  metrics: [
+    { label: "总销售额", value: "1,284 万", delta: "+18.6%" },
+    { label: "订单数", value: "8,432", delta: "+12.3%" },
+    { label: "新客户占比", value: "31%", delta: "+5.2pt" },
+    { label: "退货率", value: "3.8%", delta: "-0.6pt" }
+  ],
+  charts: [
+    {
+      type: "bar", title: "各区域销售额（万元）",
+      labels: ["华东", "华南", "华北", "西南", "西北", "其他"],
+      values: [412, 318, 265, 158, 76, 55]
+    },
+    {
+      type: "line", title: "月度销售额趋势（万元）",
+      labels: ["1月", "2月", "3月", "4月", "5月", "6月"],
+      values: [298, 265, 520, 388, 412, 484]
+    },
+    {
+      type: "pie", title: "销售渠道占比",
+      labels: ["直营", "分销", "线上商城", "大客户"],
+      values: [420, 356, 312, 196]
+    }
+  ],
+  tables: [
+    {
+      title: "重点客户 TOP5",
+      headers: ["客户", "销售额（万元）", "订单数", "环比"],
+      rows: [
+        ["恒远科技", "86.2", "142", "+22%"],
+        ["蓝湾集团", "74.5", "98", "+15%"],
+        ["晨曦制造", "63.1", "205", "+9%"],
+        ["方圆物流", "51.8", "77", "-3%"],
+        ["青山电子", "48.6", "121", "+31%"]
+      ]
+    }
+  ],
+  conclusions: [
+    "华东区增长引擎地位稳固，建议三季度追加区域市场预算。",
+    "线上商城渠道增速最快，占比已达 24%，应优先优化线上履约链路。",
+    "方圆物流环比下滑，需客户经理本月内完成回访并给出挽留方案。"
+  ]
+};
+
+/* ================ 工具函数 ================ */
+const PALETTE = ["var(--accent)", "var(--accent-2)", "var(--accent-4)", "var(--accent-5)", "var(--accent-3)", "var(--muted)"];
+
+function esc(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function fmt(n) {
+  return Number.isFinite(n) ? n.toLocaleString("zh-CN") : esc(n);
+}
+
+/* ================ SVG 柱状图 ================ */
+function barChart(c) {
+  const W = 880, H = 300, padL = 50, padB = 34, padT = 16, padR = 10;
+  const iw = W - padL - padR, ih = H - padT - padB;
+  const max = Math.max(...c.values, 1);
+  const n = c.values.length;
+  const bw = Math.min(64, iw / n * 0.55);
+  let s = "";
+  for (let g = 0; g <= 4; g++) {                     // 横向网格与刻度
+    const y = padT + ih - ih * g / 4;
+    s += '<line x1="' + padL + '" y1="' + y + '" x2="' + (W - padR) + '" y2="' + y +
+         '" stroke="var(--line)" stroke-width="1"/>' +
+         '<text x="' + (padL - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="11" fill="var(--muted)">' +
+         fmt(Math.round(max * g / 4)) + "</text>";
+  }
+  c.values.forEach((v, i) => {
+    const cx = padL + iw * (i + 0.5) / n;
+    const h = ih * v / max;
+    s += '<rect x="' + (cx - bw / 2) + '" y="' + (padT + ih - h) + '" width="' + bw +
+         '" height="' + h + '" rx="3" fill="var(--accent)"/>' +
+         '<text x="' + cx + '" y="' + (padT + ih - h - 6) + '" text-anchor="middle" font-size="11" fill="var(--fg)">' + fmt(v) + "</text>" +
+         '<text x="' + cx + '" y="' + (H - 10) + '" text-anchor="middle" font-size="12" fill="var(--muted)">' + esc(c.labels[i]) + "</text>";
+  });
+  return '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="' + esc(c.title) + '">' + s + "</svg>";
+}
+
+/* ================ SVG 折线图 ================ */
+function lineChart(c) {
+  const W = 880, H = 300, padL = 50, padB = 34, padT = 16, padR = 16;
+  const iw = W - padL - padR, ih = H - padT - padB;
+  const max = Math.max(...c.values, 1), min = Math.min(...c.values, 0);
+  const span = max - min || 1;
+  const n = c.values.length;
+  const px = i => padL + (n === 1 ? iw / 2 : iw * i / (n - 1));
+  const py = v => padT + ih - ih * (v - min) / span;
+  let s = "";
+  for (let g = 0; g <= 4; g++) {
+    const y = padT + ih - ih * g / 4;
+    s += '<line x1="' + padL + '" y1="' + y + '" x2="' + (W - padR) + '" y2="' + y +
+         '" stroke="var(--line)" stroke-width="1"/>' +
+         '<text x="' + (padL - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="11" fill="var(--muted)">' +
+         fmt(Math.round(min + span * g / 4)) + "</text>";
+  }
+  const pts = c.values.map((v, i) => px(i) + "," + py(v)).join(" ");
+  s += '<polyline points="' + pts + '" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>';
+  c.values.forEach((v, i) => {
+    s += '<circle cx="' + px(i) + '" cy="' + py(v) + '" r="4" fill="var(--card)" stroke="var(--accent)" stroke-width="2"/>' +
+         '<text x="' + px(i) + '" y="' + (py(v) - 10) + '" text-anchor="middle" font-size="11" fill="var(--fg)">' + fmt(v) + "</text>" +
+         '<text x="' + px(i) + '" y="' + (H - 10) + '" text-anchor="middle" font-size="12" fill="var(--muted)">' + esc(c.labels[i]) + "</text>";
+  });
+  return '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="' + esc(c.title) + '">' + s + "</svg>";
+}
+
+/* ================ SVG 饼图 ================ */
+function pieChart(c) {
+  const W = 880, H = 300, cx = 260, cy = 150, r = 110;
+  const total = c.values.reduce((a, b) => a + b, 0) || 1;
+  let angle = -Math.PI / 2, s = "", legend = "";
+  c.values.forEach((v, i) => {
+    const frac = v / total;
+    const a2 = angle + frac * Math.PI * 2;
+    const x1 = cx + r * Math.cos(angle), y1 = cy + r * Math.sin(angle);
+    const x2 = cx + r * Math.cos(a2), y2 = cy + r * Math.sin(a2);
+    const large = frac > 0.5 ? 1 : 0;
+    const color = PALETTE[i % PALETTE.length];
+    if (frac >= 0.999) {
+      s += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="' + color + '"/>';
+    } else {
+      s += '<path d="M' + cx + " " + cy + " L" + x1.toFixed(2) + " " + y1.toFixed(2) +
+           " A" + r + " " + r + " 0 " + large + " 1 " + x2.toFixed(2) + " " + y2.toFixed(2) +
+           ' Z" fill="' + color + '" stroke="var(--card)" stroke-width="2"/>';
+    }
+    const mid = (angle + a2) / 2, lx = cx + (r + 26) * Math.cos(mid), ly = cy + (r + 26) * Math.sin(mid);
+    if (frac >= 0.04) {
+      s += '<text x="' + lx.toFixed(2) + '" y="' + ly.toFixed(2) + '" text-anchor="middle" font-size="12" fill="var(--fg)">' +
+           (frac * 100).toFixed(1) + "%</text>";
+    }
+    legend += '<span class="it"><span class="sw" style="background:' + color + '"></span>' +
+              esc(c.labels[i]) + "（" + fmt(v) + "，" + (frac * 100).toFixed(1) + "%）</span>";
+    angle = a2;
+  });
+  return '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="' + esc(c.title) + '">' + s + "</svg>" +
+         '<div class="legend">' + legend + "</div>";
+}
+
+/* ================ 组装页面 ================ */
+function render() {
+  const R = REPORT;
+  let h = "<header><h1>" + esc(R.title) + '</h1><div class="date">' + esc(R.date) + "</div></header>";
+  if (R.summary) h += '<div class="summary">' + esc(R.summary) + "</div>";
+
+  if (R.metrics && R.metrics.length) {
+    h += '<h2 class="sec">核心指标</h2><div class="metrics">' + R.metrics.map(m => {
+      const cls = String(m.delta || "").startsWith("+") ? "up" : String(m.delta || "").startsWith("-") ? "down" : "";
+      return '<div class="metric"><div class="lb">' + esc(m.label) + '</div><div class="vl">' + esc(m.value) +
+        "</div>" + (m.delta ? '<div class="dt ' + cls + '">' + esc(m.delta) + "</div>" : "") + "</div>";
+    }).join("") + "</div>";
+  }
+
+  if (R.charts && R.charts.length) {
+    h += '<h2 class="sec">图表分析</h2>' + R.charts.map(c => {
+      const fn = { bar: barChart, line: lineChart, pie: pieChart }[c.type];
+      const body = fn ? fn(c) : '<p style="color:var(--muted)">未知图表类型：' + esc(c.type) + "</p>";
+      return '<div class="chart-card"><h3>' + esc(c.title) + "</h3>" + body + "</div>";
+    }).join("");
+  }
+
+  if (R.tables && R.tables.length) {
+    h += '<h2 class="sec">数据明细</h2>' + R.tables.map(t =>
+      '<div class="tbl-card"><h3>' + esc(t.title) + "</h3><table><thead><tr>" +
+      t.headers.map(x => "<th>" + esc(x) + "</th>").join("") + "</tr></thead><tbody>" +
+      t.rows.map(row => "<tr>" + row.map(x => "<td>" + esc(x) + "</td>").join("") + "</tr>").join("") +
+      "</tbody></table></div>"
+    ).join("");
+  }
+
+  if (R.conclusions && R.conclusions.length) {
+    h += '<h2 class="sec">结论与建议</h2><ol class="concl">' +
+      R.conclusions.map(x => "<li>" + esc(x) + "</li>").join("") + "</ol>";
+  }
+
+  h += "<footer>本报告由数据自动生成 · " + esc(R.date) + "</footer>";
+  document.getElementById("app").innerHTML = h;
+}
+render();
+</script>
+</body>
+</html>
