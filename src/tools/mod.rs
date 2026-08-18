@@ -1,5 +1,6 @@
 mod browser;
 mod bundle;
+mod canvas;
 mod check;
 mod fs_tools;
 mod image;
@@ -113,6 +114,7 @@ pub fn specs(cfg: &Config, depth: u8) -> Value {
                     "name":{"type":"string","description":"工作表名"}},"required":["csv"]}},
                 "out":{"type":"string","description":"输出 .xlsx 路径"}
             },"required":["sources","out"]}}}),
+        canvas::spec(),
     ];
     if !cfg.image_providers.is_empty() {
         v.push(json!({"type":"function","function":{"name":"image",
@@ -150,6 +152,7 @@ pub fn dispatch(name: &str, args: &Value, cfg: &Config) -> Result<String, String
         "python" => python::run(args, cfg),
         "check" => check::run(args, cfg),
         "browser" => browser::run(args, cfg),
+        "canvas" => canvas::run(args, cfg),
         "bundle" => bundle::run(args, cfg),
         "fetch" => web::fetch(args, cfg),
         "image" => image::generate(args, cfg),
