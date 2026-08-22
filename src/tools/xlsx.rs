@@ -241,6 +241,7 @@ mod tests {
             max_turns: 8,
             assets_dir: dir.clone(),
             quiet: true,
+            stateless: false,
             canvas_url: "http://127.0.0.1:8787".into(),
             canvas_id: "main".into(),
         };

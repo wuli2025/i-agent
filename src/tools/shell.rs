@@ -114,8 +114,64 @@ pub fn shell_name() -> &'static str {
     }
 }
 
+fn is_filesystem_root(token: &str) -> bool {
+    let token = token.trim_matches(|c: char| matches!(c, '\'' | '"' | ',' | ';'));
+    let unix_root = token.chars().all(|c| c == '/') || matches!(token, "/." | "/./");
+    let windows = token.replace('/', "\\");
+    let unc_root = windows.starts_with("\\\\")
+        && windows
+            .trim_start_matches('\\')
+            .trim_end_matches('\\')
+            .split('\\')
+            .filter(|part| !part.is_empty())
+            .count()
+            == 2;
+    unix_root
+        || token == r"\"
+        || (token.len() == 3
+            && token.as_bytes()[1] == b':'
+            && matches!(token.as_bytes()[2], b'\\' | b'/'))
+        || unc_root
+}
+
+/// 拦截模型最容易误触发的无界全盘扫描。它不仅拖住当前任务，还会遍历凭据、挂载盘和
+/// 其它用户目录；需要找工具时应检查 PATH、工作目录或一个已知安装目录。
+fn reject_unbounded_root_scan(cmd: &str) -> Result<(), String> {
+    for segment in cmd.split([';', '\n', '|', '&']) {
+        let words: Vec<_> = segment.split_whitespace().collect();
+        if words.is_empty() {
+            continue;
+        }
+        let executable = words[0]
+            .rsplit(['/', '\\'])
+            .next()
+            .unwrap_or(words[0])
+            .to_ascii_lowercase();
+        let recursive = matches!(
+            executable.as_str(),
+            "find" | "rg" | "grep" | "du" | "fd" | "fdfind" | "tree"
+        ) || (executable == "ls"
+            && words.iter().any(|word| {
+                *word == "--recursive"
+                    || (word.starts_with('-') && !word.starts_with("--") && word.contains('R'))
+            }))
+            || (executable == "dir" && words.iter().any(|w| w.eq_ignore_ascii_case("/s")))
+            || (matches!(executable.as_str(), "get-childitem" | "gci")
+                && words.iter().any(|w| w.eq_ignore_ascii_case("-recurse")));
+        if recursive && words.iter().skip(1).any(|word| is_filesystem_root(word)) {
+            return Err(
+                "拒绝无界扫描文件系统根目录；请改查工作目录、PATH 或明确的安装目录。".into(),
+            );
+        }
+    }
+    Ok(())
+}
+
 pub fn run(args: &Value, cfg: &Config) -> Result<String, String> {
     let cmd = arg_str(args, "cmd").ok_or("缺少 cmd")?;
+    if cfg.stateless {
+        reject_unbounded_root_scan(cmd)?;
+    }
     let timeout = args
         .get("timeout_s")
         .and_then(|v| v.as_u64())
@@ -206,5 +262,43 @@ pub fn run(args: &Value, cfg: &Config) -> Result<String, String> {
             }
         }
         None => Ok(format!("命令超时（{timeout}s）已终止\n{text}")),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::reject_unbounded_root_scan;
+
+    #[test]
+    fn rejects_unbounded_unix_and_windows_root_scans() {
+        for command in [
+            r#"find / -maxdepth 6 -name "polaris-forge""#,
+            "rg --files /",
+            "ls -R /",
+            "tree /",
+            "fd cloakbrowser /",
+            r#"dir C:\ /s"#,
+            r#"Get-ChildItem C:\ -Recurse"#,
+            r#"Get-ChildItem \\server\share\ -Recurse"#,
+        ] {
+            assert!(
+                reject_unbounded_root_scan(command).is_err(),
+                "should reject {command}"
+            );
+        }
+    }
+
+    #[test]
+    fn allows_scoped_searches_and_non_search_uses_of_slash() {
+        for command in [
+            "find . -maxdepth 3 -name polaris-forge",
+            "rg --files /opt/polaris",
+            "printf '/'",
+        ] {
+            assert!(
+                reject_unbounded_root_scan(command).is_ok(),
+                "should allow {command}"
+            );
+        }
     }
 }

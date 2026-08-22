@@ -172,6 +172,7 @@ mod tests {
             max_turns: 8,
             assets_dir: PathBuf::from("."),
             quiet: true,
+            stateless: false,
             canvas_url,
             canvas_id: "main".into(),
         }

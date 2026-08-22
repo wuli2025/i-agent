@@ -97,7 +97,7 @@ pub fn specs(cfg: &Config, depth: u8) -> Value {
             "path":{"type":"string","description":"本地 HTML 文件路径（验收模式）"},
             "url":{"type":"string","description":"线上页面地址（操纵/取数据模式），与 path 二选一"},
             "out":{"type":"string","description":"url 模式下把渲染后的数据直接落盘：.csv 存第一张表、.json 存结构化正文+全部表、其它存正文文本。落盘后即可直接引用，无需再用 fetch/curl/playwright 核对"},
-            "clicks":{"type":"integer","description":"自动点击多少个可点元素来验证交互，默认 3"},
+            "clicks":{"type":"integer","description":"自动点击多少个可点元素。本地 HTML 验收默认 3；线上 URL 默认 0，只有用户明确授权具体交互时才可设为正数"},
             "wait_ms":{"type":"integer","description":"加载后等待毫秒数，默认 1200，JS 延迟注入数据的页要调大"}
         }}}}),
         json!({"type":"function","function":{"name":"bundle",

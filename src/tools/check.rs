@@ -32,12 +32,13 @@ fn check_html(path: &str, text: &str, cfg: &Config) -> Result<String, String> {
         Ok(msg) => msg,
         Err(e) => {
             // 语法就挂了，不必再开浏览器——先修语法
-            return Ok(format!("{e}\n\n修好语法后重新 check。"));
+            return Err(format!("{e}\n\n修好语法后重新 check。"));
         }
     };
     match browser::smoke(cfg, path) {
-        Ok((_, report)) => Ok(format!("{syntax}\n\n{report}")),
-        Err(e) => Ok(format!(
+        Ok((true, report)) => Ok(format!("{syntax}\n\n{report}")),
+        Ok((false, report)) => Err(format!("{syntax}\n\n{report}")),
+        Err(e) => Err(format!(
             "{syntax}\n\n浏览器冒烟未能执行: {e}\n（静态语法已通过，但没有真浏览器验证就不能确定不白屏）"
         )),
     }
@@ -56,7 +57,7 @@ fn check_json(path: &str, text: &str) -> Result<String, String> {
                 .chars()
                 .take(160)
                 .collect::<String>();
-            return Ok(format!(
+            return Err(format!(
                 "JSON 语法错误: {path} 第 {line} 行第 {col} 列: {e}\n该行内容: {ctx}\n常见原因: 字符串内有未转义的英文双引号（对话引用请改用中文引号「」）、多余逗号、缺逗号。请用 edit 修复后重新 check。"
             ));
         }
@@ -157,5 +158,20 @@ fn check_json(path: &str, text: &str) -> Result<String, String> {
             }
         }
     }
-    Ok(report)
+    if report.contains("GAME schema 问题") || report.contains("游戏数据问题") {
+        Err(report)
+    } else {
+        Ok(report)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::check_json;
+
+    #[test]
+    fn invalid_json_is_a_failed_check_not_a_successful_report() {
+        assert!(check_json("broken.json", "{not json}").is_err());
+        assert!(check_json("valid.json", r#"{"ok":true}"#).is_ok());
+    }
 }

@@ -124,6 +124,7 @@ version = "0.1.0"
 dependencies = [
  "globset",
  "ignore",
+ "libc",
  "regex-lite",
  "serde",
  "serde_json",

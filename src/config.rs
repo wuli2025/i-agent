@@ -49,6 +49,8 @@ pub struct Config {
     pub max_turns: usize,
     pub assets_dir: PathBuf,
     pub quiet: bool,
+    /// Polaris stdio 模式下不在用户工作目录写会话或工具临时状态。
+    pub stateless: bool,
     /// AI Canvas Agent API 地址（默认本机 8787）。
     pub canvas_url: String,
     /// 未在工具调用中指定时使用的画布 ID。
@@ -230,6 +232,7 @@ impl Config {
         provider_sel: Option<String>,
         model_override: Option<String>,
         quiet: bool,
+        stateless: bool,
     ) -> Result<Config, String> {
         let workspace = match workspace {
             Some(w) => PathBuf::from(w),
@@ -420,6 +423,7 @@ impl Config {
             max_output,
             max_turns: cf.max_turns.unwrap_or(96),
             quiet,
+            stateless,
             canvas_url,
             canvas_id,
         })

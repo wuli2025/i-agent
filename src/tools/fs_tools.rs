@@ -7,6 +7,13 @@ fn is_binary(bytes: &[u8]) -> bool {
     bytes.iter().take(1024).any(|b| *b == 0)
 }
 
+fn reject_root_walk(root: &Path) -> Result<(), String> {
+    if root.has_root() && root.parent().is_none() {
+        return Err("拒绝从文件系统根目录递归搜索；请改查工作目录或一个明确的安装目录。".into());
+    }
+    Ok(())
+}
+
 pub fn read(args: &Value, cfg: &Config) -> Result<String, String> {
     let path = arg_str(args, "path").ok_or("缺少 path")?;
     let p = cfg.resolve(path);
@@ -140,6 +147,9 @@ pub fn ls(args: &Value, cfg: &Config) -> Result<String, String> {
 pub fn glob(args: &Value, cfg: &Config) -> Result<String, String> {
     let pattern = arg_str(args, "pattern").ok_or("缺少 pattern")?;
     let root = cfg.resolve(arg_str(args, "path").unwrap_or("."));
+    if cfg.stateless {
+        reject_root_walk(&root)?;
+    }
     let matcher = globset::GlobBuilder::new(pattern)
         .literal_separator(false)
         .build()
@@ -183,6 +193,9 @@ pub fn grep(args: &Value, cfg: &Config) -> Result<String, String> {
     let pattern = arg_str(args, "pattern").ok_or("缺少 pattern")?;
     let re = regex_lite::Regex::new(pattern).map_err(|e| format!("正则无效: {e}"))?;
     let root = cfg.resolve(arg_str(args, "path").unwrap_or("."));
+    if cfg.stateless {
+        reject_root_walk(&root)?;
+    }
     let name_filter = match arg_str(args, "glob") {
         Some(g) => Some(
             globset::GlobBuilder::new(g)
@@ -255,4 +268,17 @@ pub fn grep(args: &Value, cfg: &Config) -> Result<String, String> {
         out.push_str("…[结果过多已截断，请缩小范围]");
     }
     Ok(cap(out, 10000))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::reject_root_walk;
+    use std::path::Path;
+
+    #[test]
+    fn root_walk_guard_rejects_root_but_allows_scoped_directories() {
+        assert!(reject_root_walk(Path::new(std::path::MAIN_SEPARATOR_STR)).is_err());
+        assert!(reject_root_walk(Path::new(".")).is_ok());
+        assert!(reject_root_walk(Path::new("/opt/polaris")).is_ok());
+    }
 }
