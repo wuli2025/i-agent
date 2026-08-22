@@ -49,6 +49,12 @@ pub struct Config {
     pub max_turns: usize,
     pub assets_dir: PathBuf,
     pub quiet: bool,
+    /// Polaris stdio 模式下不在用户工作目录写会话或工具临时状态。
+    pub stateless: bool,
+    /// AI Canvas Agent API 地址（默认本机 8787）。
+    pub canvas_url: String,
+    /// 未在工具调用中指定时使用的画布 ID。
+    pub canvas_id: String,
 }
 
 #[derive(Deserialize, Default)]
@@ -77,6 +83,10 @@ struct ConfigFile {
     providers: Vec<FileProvider>,
     #[serde(default)]
     image_providers: Vec<FileProvider>,
+    #[serde(default)]
+    canvas_url: Option<String>,
+    #[serde(default)]
+    canvas_id: Option<String>,
 }
 
 pub fn home_dir() -> PathBuf {
@@ -222,6 +232,7 @@ impl Config {
         provider_sel: Option<String>,
         model_override: Option<String>,
         quiet: bool,
+        stateless: bool,
     ) -> Result<Config, String> {
         let workspace = match workspace {
             Some(w) => PathBuf::from(w),
@@ -249,6 +260,12 @@ impl Config {
                 }
                 if !f.image_providers.is_empty() {
                     cf.image_providers = f.image_providers;
+                }
+                if f.canvas_url.is_some() {
+                    cf.canvas_url = f.canvas_url;
+                }
+                if f.canvas_id.is_some() {
+                    cf.canvas_id = f.canvas_id;
                 }
             }
         }
@@ -385,6 +402,16 @@ impl Config {
             .or(cf.context_window)
             .unwrap_or(65536);
         let max_output = cf.max_output.unwrap_or(16384).min(context_window / 3);
+        let canvas_url = env_nonempty("I_AGENT_CANVAS_URL")
+            .or_else(|| env_nonempty("AI_CANVAS_API_URL"))
+            .or(cf.canvas_url)
+            .unwrap_or_else(|| "http://127.0.0.1:8787".into())
+            .trim_end_matches('/')
+            .to_string();
+        let canvas_id = env_nonempty("I_AGENT_CANVAS_ID")
+            .or_else(|| env_nonempty("AI_CANVAS_ID"))
+            .or(cf.canvas_id)
+            .unwrap_or_else(|| "main".into());
 
         Ok(Config {
             assets_dir: crate::skills::assets_dir(),
@@ -396,6 +423,9 @@ impl Config {
             max_output,
             max_turns: cf.max_turns.unwrap_or(96),
             quiet,
+            stateless,
+            canvas_url,
+            canvas_id,
         })
     }
 

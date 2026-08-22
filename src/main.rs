@@ -9,7 +9,8 @@ mod session;
 mod skills;
 mod tools;
 
-use std::io::{BufRead, Write};
+use serde_json::json;
+use std::io::{BufRead, Read, Write};
 use std::sync::Arc;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -30,6 +31,7 @@ fn print_help() {
   -m, --model <名>   覆盖模型名
   -c, --continue     继续本工作目录上次会话（当前分支）
   -q, --quiet        不打印工具调用过程
+      --polaris-stdio Polaris 机器协议：stdin 读任务，stdout 输出 NDJSON，不写会话
   -V, --version      版本
 
 批量派生（一次任务出多个版本；只有批量任务才该走这条路）:
@@ -61,6 +63,7 @@ fn print_help() {
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    let polaris_stdio_requested = args.iter().any(|arg| arg == "--polaris-stdio");
     let mut headless = false;
     let mut quiet = false;
     let mut cont = false;
@@ -74,71 +77,101 @@ fn main() {
     let mut list_branches = false;
     let mut from_id: Option<u64> = None;
     let mut parallel = true;
+    let mut polaris_stdio = false;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
             "-p" | "--print" => headless = true,
             "-q" | "--quiet" => quiet = true,
+            "--polaris-stdio" => {
+                polaris_stdio = true;
+                headless = true;
+                quiet = true;
+            }
             "-c" | "--continue" => cont = true,
             "--branches" => list_branches = true,
             "--no-parallel" => parallel = false,
             "--variants" => {
-                i += 1;
-                if i < args.len() {
-                    variants_spec = Some(args[i].clone());
-                }
+                variants_spec = Some(required_option_value(
+                    &args,
+                    &mut i,
+                    "--variants",
+                    polaris_stdio_requested,
+                ));
             }
             "--prepare" => {
-                i += 1;
-                if i < args.len() {
-                    prepare_task = Some(args[i].clone());
-                }
+                prepare_task = Some(required_option_value(
+                    &args,
+                    &mut i,
+                    "--prepare",
+                    polaris_stdio_requested,
+                ));
             }
             "--branch" => {
-                i += 1;
-                if i < args.len() {
-                    branch_sel = Some(args[i].clone());
-                }
+                branch_sel = Some(required_option_value(
+                    &args,
+                    &mut i,
+                    "--branch",
+                    polaris_stdio_requested,
+                ));
             }
             "--from" => {
-                i += 1;
-                if i < args.len() {
-                    match args[i].trim_start_matches('#').parse::<u64>() {
-                        Ok(v) => from_id = Some(v),
-                        Err(_) => {
-                            eprintln!("--from 需要一个 entry id（整数），收到: {}", args[i]);
-                            std::process::exit(1);
-                        }
+                let value = required_option_value(&args, &mut i, "--from", polaris_stdio_requested);
+                match value.trim_start_matches('#').parse::<u64>() {
+                    Ok(v) => from_id = Some(v),
+                    Err(_) => {
+                        exit_cli_error(
+                            &format!("--from 需要一个 entry id（整数），收到: {value}"),
+                            polaris_stdio_requested,
+                            2,
+                        );
                     }
                 }
             }
             "-C" | "--dir" => {
-                i += 1;
-                if i < args.len() {
-                    workspace = Some(args[i].clone());
-                }
+                let flag = args[i].clone();
+                workspace = Some(required_option_value(
+                    &args,
+                    &mut i,
+                    &flag,
+                    polaris_stdio_requested,
+                ));
             }
             "--provider" => {
-                i += 1;
-                if i < args.len() {
-                    provider = Some(args[i].clone());
-                }
+                provider = Some(required_option_value(
+                    &args,
+                    &mut i,
+                    "--provider",
+                    polaris_stdio_requested,
+                ));
             }
             "-m" | "--model" => {
-                i += 1;
-                if i < args.len() {
-                    model = Some(args[i].clone());
-                }
+                let flag = args[i].clone();
+                model = Some(required_option_value(
+                    &args,
+                    &mut i,
+                    &flag,
+                    polaris_stdio_requested,
+                ));
             }
             "-V" | "--version" => {
+                if polaris_stdio_requested {
+                    exit_cli_error("--polaris-stdio 不能与 --version 组合", true, 2);
+                }
                 println!("i-agent {VERSION}");
                 return;
             }
             "-h" | "--help" => {
+                if polaris_stdio_requested {
+                    exit_cli_error("--polaris-stdio 不能与 --help 组合", true, 2);
+                }
                 print_help();
                 return;
             }
             "init-assets" => {
+                if polaris_stdio_requested {
+                    exit_cli_error("--polaris-stdio 不能运行 init-assets", true, 2);
+                }
                 let dir = skills::materialize_assets(true);
                 println!("技能包已释放到: {}", dir.display());
                 return;
@@ -147,17 +180,63 @@ fn main() {
             // 一次 --prepare 没被识别，那段话就被并进了任务描述，
             // 三个变体齐刷刷交回大纲，而命令行看上去一切正常 —— 这种失败最难查。
             s if s.starts_with('-') && s.len() > 1 => {
-                eprintln!("未知选项: {s}\n用 -h 查看可用选项。（如果它本该是任务文本，请加引号或放在 -p 之后）");
-                std::process::exit(2);
+                exit_cli_error(
+                    &format!("未知选项: {s}。用 -h 查看可用选项；如果它本该是任务文本，请加引号。"),
+                    polaris_stdio_requested,
+                    2,
+                );
             }
             s => prompt_parts.push(s.to_string()),
         }
         i += 1;
     }
 
-    let cfg = match config::Config::load(workspace, provider, model, quiet) {
+    if polaris_stdio
+        && (cont
+            || list_branches
+            || branch_sel.is_some()
+            || from_id.is_some()
+            || variants_spec.is_some()
+            || prepare_task.is_some()
+            || !parallel)
+    {
+        exit_cli_error(
+            "--polaris-stdio 是单轮无状态协议，不能与会话、分支、prepare 或 variants 选项组合",
+            true,
+            2,
+        );
+    }
+
+    let polaris_prompt = if polaris_stdio {
+        if !prompt_parts.is_empty() {
+            emit_polaris_event(json!({
+                "type": "result",
+                "ok": false,
+                "error": "--polaris-stdio 只从 stdin 接收任务，不能再带位置参数"
+            }));
+            std::process::exit(2);
+        }
+        let mut prompt = String::new();
+        if let Err(error) = std::io::stdin().read_to_string(&mut prompt) {
+            emit_polaris_event(json!({
+                "type": "result",
+                "ok": false,
+                "error": format!("读取 stdin 失败: {error}")
+            }));
+            std::process::exit(1);
+        }
+        Some(prompt)
+    } else {
+        None
+    };
+
+    let cfg = match config::Config::load(workspace, provider, model, quiet, polaris_stdio) {
         Ok(c) => Arc::new(c),
         Err(e) => {
+            if polaris_stdio {
+                emit_polaris_event(json!({"type": "result", "ok": false, "error": e}));
+                std::process::exit(1);
+            }
             eprintln!("配置错误: {e}");
             std::process::exit(1);
         }
@@ -174,7 +253,10 @@ fn main() {
     let mut active_branch = session::MAIN.to_string();
     let mut sink_head: Option<u64> = None;
 
-    if cont || branch_sel.is_some() || from_id.is_some() {
+    if polaris_stdio {
+        // Polaris 自己持久化对话历史；这里必须完全无状态，不能清写用户项目里的
+        // .i-agent/session.jsonl，也不能让不同 Polaris 对话共用一条 i-agent 分支。
+    } else if cont || branch_sel.is_some() || from_id.is_some() {
         let log = session::Log::load(&cfg.workspace);
         if !log.is_empty() {
             let prev = session::read_head(&cfg.workspace);
@@ -218,8 +300,10 @@ fn main() {
     } else {
         session::clear(&cfg.workspace);
     }
-    session::write_head(&cfg.workspace, &active_branch);
-    ag.sink = Some(session::Sink::new(&active_branch, sink_head, None));
+    if !polaris_stdio {
+        session::write_head(&cfg.workspace, &active_branch);
+        ag.sink = Some(session::Sink::new(&active_branch, sink_head, None));
+    }
 
     // ===== F-14 批量派生：一次任务派生多个版本 =====
     if let Some(spec) = variants_spec {
@@ -313,17 +397,70 @@ fn main() {
         return;
     }
 
-    let on_text = |s: &str| {
-        print!("{s}");
-        let _ = std::io::stdout().flush();
-    };
-
     if headless {
-        let task = prompt_parts.join(" ");
+        let task = polaris_prompt.unwrap_or_else(|| prompt_parts.join(" "));
         if task.trim().is_empty() {
+            if polaris_stdio {
+                emit_polaris_event(json!({
+                    "type": "result",
+                    "ok": false,
+                    "error": "stdin 任务不能为空"
+                }));
+                std::process::exit(1);
+            }
             eprintln!("无头模式需要任务文本: i-agent -p \"...\"");
             std::process::exit(1);
         }
+        if polaris_stdio {
+            ag.set_event_sink(Arc::new(|event| match event {
+                agent::AgentEvent::Tool { name, detail } => {
+                    emit_polaris_event(json!({
+                        "type": "tool",
+                        "name": name,
+                        "detail": detail,
+                    }));
+                }
+            }));
+            let on_text = |text: &str| {
+                emit_polaris_event(json!({"type": "delta", "text": text}));
+            };
+            match ag.run(&task, &on_text) {
+                Ok(result) => {
+                    emit_polaris_usage(&ag);
+                    emit_polaris_event(json!({
+                        "type": "result",
+                        "ok": true,
+                        "result": result,
+                        "usage": {
+                            "requests": ag.llm_calls,
+                            "input_tokens": ag.usage_in,
+                            "cached_input_tokens": ag.usage_cached,
+                            "output_tokens": ag.usage_out,
+                        }
+                    }));
+                }
+                Err(error) => {
+                    emit_polaris_usage(&ag);
+                    emit_polaris_event(json!({
+                        "type": "result",
+                        "ok": false,
+                        "error": error,
+                        "usage": {
+                            "requests": ag.llm_calls,
+                            "input_tokens": ag.usage_in,
+                            "cached_input_tokens": ag.usage_cached,
+                            "output_tokens": ag.usage_out,
+                        }
+                    }));
+                    std::process::exit(1);
+                }
+            }
+            return;
+        }
+        let on_text = |s: &str| {
+            print!("{s}");
+            let _ = std::io::stdout().flush();
+        };
         // 把实际选中的供应商/模型/端点亮出来：选错了模型静默跑完
         // 比当场报错糟糕得多（评测里就是这样露的馅）
         if !quiet {
@@ -357,6 +494,10 @@ fn main() {
     }
 
     // 交互模式
+    let on_text = |s: &str| {
+        print!("{s}");
+        let _ = std::io::stdout().flush();
+    };
     println!(
         "i-agent {VERSION} | 模型 {} ({}) | 工作目录 {}",
         cfg.provider.model,
@@ -408,4 +549,48 @@ fn main() {
         }
         println!("\n");
     }
+}
+
+fn emit_polaris_event(event: serde_json::Value) {
+    println!("{event}");
+    let _ = std::io::stdout().flush();
+}
+
+fn required_option_value(
+    args: &[String],
+    index: &mut usize,
+    flag: &str,
+    polaris_stdio: bool,
+) -> String {
+    *index += 1;
+    let Some(value) = args.get(*index) else {
+        exit_cli_error(&format!("{flag} 缺少参数值"), polaris_stdio, 2);
+    };
+    if value.starts_with('-') {
+        exit_cli_error(
+            &format!("{flag} 缺少参数值（下一项是选项 {value}）"),
+            polaris_stdio,
+            2,
+        );
+    }
+    value.clone()
+}
+
+fn exit_cli_error(message: &str, polaris_stdio: bool, code: i32) -> ! {
+    if polaris_stdio {
+        emit_polaris_event(json!({"type": "result", "ok": false, "error": message}));
+    } else {
+        eprintln!("{message}");
+    }
+    std::process::exit(code);
+}
+
+fn emit_polaris_usage(agent: &agent::Agent) {
+    emit_polaris_event(json!({
+        "type": "usage",
+        "requests": agent.llm_calls,
+        "input_tokens": agent.usage_in,
+        "cached_input_tokens": agent.usage_cached,
+        "output_tokens": agent.usage_out,
+    }));
 }

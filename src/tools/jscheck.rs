@@ -1,5 +1,9 @@
 use crate::config::Config;
 use std::process::{Command, Stdio};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{SystemTime, UNIX_EPOCH};
+
+static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 /// 抽出 HTML 里所有内联 <script>（跳过 src= 外链和非 JS 类型），返回 (起始行号, 代码)
 pub fn inline_scripts(html: &str) -> Vec<(usize, String)> {
@@ -73,8 +77,29 @@ pub fn check_html_syntax(cfg: &Config, html: &str) -> Result<String, String> {
         return Ok("（未找到 node，跳过 JS 语法检查）".into());
     };
 
-    let tmp = cfg.workspace.join(".i-agent").join("tmp");
-    let _ = std::fs::create_dir_all(&tmp);
+    let tmp = if cfg.stateless {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        std::env::temp_dir().join(format!(
+            "i-agent-polaris-jscheck-{}-{nonce}-{}",
+            std::process::id(),
+            TEMP_COUNTER.fetch_add(1, Ordering::Relaxed)
+        ))
+    } else {
+        cfg.workspace.join(".i-agent").join("tmp")
+    };
+    if cfg.stateless {
+        std::fs::create_dir(&tmp).map_err(|e| format!("安全创建 JS 检查临时目录失败: {e}"))?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = std::fs::set_permissions(&tmp, std::fs::Permissions::from_mode(0o700));
+        }
+    } else {
+        let _ = std::fs::create_dir_all(&tmp);
+    }
     let mut errs: Vec<String> = Vec::new();
 
     for (idx, (line, code)) in scripts.iter().enumerate() {
@@ -119,6 +144,9 @@ pub fn check_html_syntax(cfg: &Config, html: &str) -> Result<String, String> {
         let _ = std::fs::remove_file(&f);
     }
 
+    if cfg.stateless {
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
     if errs.is_empty() {
         Ok(format!(
             "JS 语法检查通过（{} 个内联脚本，逐块单独校验）",

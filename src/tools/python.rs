@@ -2,8 +2,22 @@ use super::{arg_str, cap};
 use crate::config::Config;
 use serde_json::Value;
 use std::io::Write;
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
-use std::time::{Duration, Instant};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+
+static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+struct TempSource(Option<PathBuf>);
+
+impl Drop for TempSource {
+    fn drop(&mut self) {
+        if let Some(path) = self.0.take() {
+            let _ = std::fs::remove_file(path);
+        }
+    }
+}
 
 /// Run Python source directly, with no shell in between.
 ///
@@ -26,10 +40,38 @@ pub fn run(args: &Value, cfg: &Config) -> Result<String, String> {
         None => cfg.workspace.clone(),
     };
 
-    let dir = cwd.join(".i-agent");
-    let _ = std::fs::create_dir_all(&dir);
-    let src = dir.join("_run.py");
-    std::fs::write(&src, code).map_err(|e| format!("写临时脚本失败: {e}"))?;
+    let src = if cfg.stateless {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        std::env::temp_dir().join(format!(
+            "i-agent-polaris-{}-{nonce}-{}.py",
+            std::process::id(),
+            TEMP_COUNTER.fetch_add(1, Ordering::Relaxed)
+        ))
+    } else {
+        let dir = cwd.join(".i-agent");
+        let _ = std::fs::create_dir_all(&dir);
+        dir.join("_run.py")
+    };
+    if cfg.stateless {
+        let mut options = std::fs::OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+        let mut file = options
+            .open(&src)
+            .map_err(|e| format!("安全创建临时脚本失败: {e}"))?;
+        file.write_all(code.as_bytes())
+            .map_err(|e| format!("写临时脚本失败: {e}"))?;
+    } else {
+        std::fs::write(&src, code).map_err(|e| format!("写临时脚本失败: {e}"))?;
+    }
+    let _temp_source = TempSource(cfg.stateless.then(|| src.clone()));
 
     // python3 on unix, python on Windows — try both rather than making the model guess.
     let exes: &[&str] = if cfg!(windows) {
@@ -107,4 +149,45 @@ pub fn run(args: &Value, cfg: &Config) -> Result<String, String> {
 
     let _ = std::io::stderr().flush();
     Err(format!("找不到可用的 python 解释器（{last_spawn_err}）"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::{detect_protocol, Config, Provider};
+
+    #[test]
+    fn stateless_python_uses_os_temp_and_leaves_workspace_clean() {
+        let workspace = std::env::temp_dir().join(format!(
+            "i-agent-stateless-python-{}-{}",
+            std::process::id(),
+            TEMP_COUNTER.fetch_add(1, Ordering::Relaxed)
+        ));
+        std::fs::create_dir_all(&workspace).unwrap();
+        let cfg = Config {
+            workspace: workspace.clone(),
+            provider: Provider {
+                name: "test".into(),
+                base: String::new(),
+                model: String::new(),
+                key: String::new(),
+                protocol: detect_protocol("", ""),
+            },
+            fallbacks: vec![],
+            image_providers: vec![],
+            context_window: 32_768,
+            max_output: 4_096,
+            max_turns: 8,
+            assets_dir: workspace.clone(),
+            quiet: true,
+            stateless: true,
+            canvas_url: "http://127.0.0.1:8787".into(),
+            canvas_id: "main".into(),
+        };
+
+        let output = run(&serde_json::json!({"code": "print('clean')"}), &cfg).unwrap();
+        assert_eq!(output, "clean");
+        assert!(!workspace.join(".i-agent").exists());
+        let _ = std::fs::remove_dir_all(workspace);
+    }
 }

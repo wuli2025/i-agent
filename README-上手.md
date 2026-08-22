@@ -50,6 +50,16 @@ i-agent                                                        # 交互模式
 i-agent -C /some/dir -p "..."                                  # 指定工作目录
 ```
 
+### 4. 控制 AI 无限画布（可选）
+
+先在 `D:\polaris\AIGC\ai-canvas` 运行 `npm run dev`，然后可直接要求 i-agent 创建或排列分镜：
+
+```powershell
+i-agent -p "在 main 画布创建 9 宫格产品广告分镜，自动连线并核对最终结果"
+```
+
+内置 `canvas` 工具和网页 UI/MCP 共用同一个 CommandBus。默认 API 是 `http://127.0.0.1:8787`；用 `I_AGENT_CANVAS_URL`、`I_AGENT_CANVAS_ID` 覆盖。
+
 ## 它和普通 agent 外壳有什么不一样
 
 ### 交付门禁：不许"我觉得没问题"就收工
@@ -96,6 +106,8 @@ i-agent -C /some/dir -p "..."                                  # 指定工作目
 | `I_AGENT_CHROME` | Chromium/Chrome/Edge 可执行文件路径 |
 | `I_AGENT_PLAYWRIGHT` | 含 playwright 的 node_modules 目录 |
 | `I_AGENT_ASSETS` | 自定义技能包目录（避免被内置资产覆盖刷新） |
+| `I_AGENT_CANVAS_URL` | AI Canvas API 地址（默认 `http://127.0.0.1:8787`） |
+| `I_AGENT_CANVAS_ID` | 默认画布 ID（默认 `main`） |
 | `HTTPS_PROXY` / `HTTP_PROXY` | **会被读取**（很多 HTTP 库不读，导致在需要代理出网的机器上静默挂死） |
 
 配置文件：`~/.i-agent/config.json` 与 `<工作目录>/.i-agent/config.json`（后者优先）。

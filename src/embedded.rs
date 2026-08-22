@@ -1,6 +1,13 @@
 // 本文件由 scripts/gen_embedded 生成，勿手改
 pub static ASSETS: &[(&str, &str)] = &[
     (
+        "skills/canvas/SKILL.md",
+        include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/assets/skills/canvas/SKILL.md"
+        )),
+    ),
+    (
         "skills/game/SKILL.md",
         include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),

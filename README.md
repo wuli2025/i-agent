@@ -15,6 +15,7 @@
 | 知识体系 | 资料整理成可检索的结构化知识库 | `kb/` 目录 |
 | 网页 / 动效 | 单文件响应式页面、镜头、转场和粒子动效 | 单文件 HTML |
 | 生图 | MiniMax image-01、智谱 CogView-4、硅基流动 Kolors | PNG |
+| AI 无限画布 | 查询/新增/连接/排列卡片，批量创建 9/25 宫格分镜，打组模板并运行 DAG | 实时 Canvas / workflow JSON |
 
 ## 快速开始
 
@@ -54,6 +55,24 @@ i-agent
 **供应商选择规则**：显式配置（`I_AGENT_*`、`ANTHROPIC_*`、配置文件 `providers`）优先且排他；只有完全没有显式配置时，才扫描内置供应商的密钥。发生回退时会向 stderr 明确告警，不会静默换模型。
 
 > 不要把真实密钥写进配置示例、脚本、日志或 Git。优先使用环境变量或系统凭据存储；已经公开或粘贴到共享记录中的密钥应及时轮换。
+
+## 控制 Polaris AI 画布
+
+`canvas` 工具直接调用画布的 Agent-first API；它和网页 UI、MCP Server 共用 CommandBus，所有新增、连接、排列、打组操作都会写入同一份 Yjs 文档并实时显示。
+
+先在 `D:\polaris\AIGC\ai-canvas` 启动服务：
+
+```powershell
+npm run dev
+```
+
+然后可以让 i-agent 执行：
+
+```powershell
+i-agent -p "查询 main 画布，在右侧创建一个 9 宫格广告分镜，每镜 3 秒，按分镜顺序连接并确认最终节点数"
+```
+
+默认连接 `http://127.0.0.1:8787` 的 `main` 画布。可用 `I_AGENT_CANVAS_URL` / `I_AGENT_CANVAS_ID`（兼容 `AI_CANVAS_API_URL` / `AI_CANVAS_ID`）覆盖，也可在配置文件中设置 `canvas_url`、`canvas_id`。画布任务会自动命中内嵌的 `canvas` Skill，遵循 `query → 修改/排列 → run → wait → query 核验` 的流程。
 
 ## 构建
 
@@ -127,10 +146,10 @@ src/
   agent.rs     双层 agent 循环、doom-loop 熔断、task 并行扇出
   llm.rs       Anthropic / OpenAI 兼容流式客户端与供应商回退
   context.rs   token 记账与两级压缩
-  tools/       read/write/edit/glob/grep/shell/fetch/browser/image/xlsx/task
+  tools/       read/write/edit/glob/grep/shell/fetch/browser/image/xlsx/canvas/task
   skills.rs    技能发现、内嵌释放与索引注入
 assets/
-  skills/      game、motionfx、slides、office、webpage、longform、knowledge
+  skills/      game、motionfx、slides、office、webpage、longform、knowledge、canvas
   tools/       浏览器验收脚本
 ```
 
